@@ -117,12 +117,7 @@ File `vercel.json` đã được tạo với cấu hình tối ưu:
       "src": "/(.*)",
       "dest": "server.js"
     }
-  ],
-  "functions": {
-    "server.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
 ```
 
@@ -130,7 +125,8 @@ File `vercel.json` đã được tạo với cấu hình tối ưu:
 - `version: 2`: Sử dụng Build Output API v2
 - `builds`: Chỉ định file `server.js` sử dụng `@vercel/node` builder
 - `routes`: Route tất cả requests đến `server.js`
-- `functions.maxDuration`: Timeout 30 giây (Hobby plan: 10s, Pro: 60s)
+
+**Lưu ý**: Không thể sử dụng `builds` và `functions` cùng lúc trong `vercel.json`. Để cấu hình timeout, xem phần "Cấu hình Timeout" bên dưới.
 
 ### File `.vercelignore`
 
@@ -152,6 +148,20 @@ Nếu bạn cần cấu hình environment variables:
 5. Redeploy project để áp dụng thay đổi
 
 **Lưu ý**: Không commit file `.env` vào Git. Sử dụng Environment Variables trong Vercel Dashboard.
+
+### Cấu hình Timeout
+
+Vì không thể dùng `functions` cùng với `builds`, để cấu hình timeout:
+
+**Cách 1: Qua Vercel Dashboard (Khuyến nghị)**
+1. Vào Vercel Dashboard → Project → Settings → Functions
+2. Tìm function `server.js`
+3. Cấu hình `maxDuration` (giây)
+   - Hobby plan: tối đa 10 giây
+   - Pro plan: tối đa 60 giây
+
+**Cách 2: Sử dụng Build Output API v3**
+Nếu cần cấu hình chi tiết hơn, có thể chuyển sang Build Output API v3 (không dùng `builds`). Xem [Vercel Documentation](https://vercel.com/docs/build-output-api) để biết thêm.
 
 ## Giới hạn và lưu ý
 
@@ -179,28 +189,23 @@ Nếu bạn cần cấu hình environment variables:
 - Kiểm tra `node_modules` đã được commit (không nên commit)
 
 ### Lỗi: "Function timeout"
-- Tăng `maxDuration` trong `vercel.json`:
-```json
-{
-  "functions": {
-    "server.js": {
-      "maxDuration": 30
-    }
-  }
-}
-```
+- Cấu hình `maxDuration` trong Vercel Dashboard:
+  1. Vào Project → Settings → Functions
+  2. Tìm function `server.js`
+  3. Tăng `maxDuration` (Hobby: 10s, Pro: 60s)
+- Hoặc nâng cấp lên Pro plan để có timeout lâu hơn
 
 ### Lỗi: "Memory limit exceeded"
-- Tăng memory trong `vercel.json`:
-```json
-{
-  "functions": {
-    "server.js": {
-      "memory": 2048
-    }
-  }
-}
-```
+- Cấu hình memory trong Vercel Dashboard:
+  1. Vào Project → Settings → Functions
+  2. Tìm function `server.js`
+  3. Tăng memory allocation
+- Hoặc optimize code để giảm memory usage
+
+### Lỗi: "The `functions` property cannot be used in conjunction with the `builds` property"
+- **Nguyên nhân**: Không thể dùng `builds` và `functions` cùng lúc trong `vercel.json`
+- **Giải pháp**: Xóa phần `functions` khỏi `vercel.json`, chỉ giữ `builds` và `routes`
+- Cấu hình timeout/memory qua Vercel Dashboard thay vì trong `vercel.json`
 
 ## Cập nhật deployment
 
