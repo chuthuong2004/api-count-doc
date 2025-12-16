@@ -2,11 +2,14 @@
 
 Hướng dẫn chi tiết để deploy API đếm số trang DOCX/PPTX lên Vercel.
 
+> 💡 **Tham khảo**: Hướng dẫn này được viết dựa trên best practices từ các dự án thành công như [selfhost-deeplink-demo](https://github.com/chuthuong2004/selfhost-deeplink-demo)
+
 ## Yêu cầu
 
 - Tài khoản Vercel (đăng ký miễn phí tại [vercel.com](https://vercel.com))
 - Tài khoản GitHub (để kết nối repository)
 - Dự án đã được push lên GitHub
+- Node.js >= 16.x (Vercel hỗ trợ Node.js 18.x và 20.x)
 
 ## Các bước deploy
 
@@ -14,8 +17,10 @@ Hướng dẫn chi tiết để deploy API đếm số trang DOCX/PPTX lên Verc
 
 Đảm bảo các file sau đã có trong dự án:
 - `package.json` - với các dependencies cần thiết
-- `server.js` - file chính của Express app
+- `server.js` - file chính của Express app (đã export app cho Vercel)
 - `vercel.json` - file cấu hình Vercel (đã được tạo)
+- `.vercelignore` - file để ignore các file không cần thiết khi deploy
+- `.gitignore` - file để ignore các file không cần commit
 
 ### 2. Push code lên GitHub
 
@@ -50,11 +55,13 @@ git push -u origin main
 4. Cấu hình project:
    - **Framework Preset**: Không cần chọn (hoặc chọn "Other")
    - **Root Directory**: `./` (mặc định)
-   - **Build Command**: Để trống (không cần build)
+   - **Build Command**: Để trống (không cần build cho Express)
    - **Output Directory**: Để trống
    - **Install Command**: `npm install` (mặc định)
+   - **Environment Variables**: Thêm nếu cần (ví dụ: `NODE_ENV=production`)
 5. Click **"Deploy"**
 6. Chờ quá trình deploy hoàn tất (thường mất 1-2 phút)
+7. Vercel sẽ tự động detect `vercel.json` và cấu hình đúng
 
 #### Cách 2: Deploy qua Vercel CLI
 
@@ -94,7 +101,7 @@ curl -X POST https://your-project-name.vercel.app/api/count-pages \
 
 ### File `vercel.json`
 
-File `vercel.json` đã được tạo với cấu hình cơ bản:
+File `vercel.json` đã được tạo với cấu hình tối ưu:
 
 ```json
 {
@@ -110,17 +117,41 @@ File `vercel.json` đã được tạo với cấu hình cơ bản:
       "src": "/(.*)",
       "dest": "server.js"
     }
-  ]
+  ],
+  "functions": {
+    "server.js": {
+      "maxDuration": 30
+    }
+  }
 }
 ```
+
+**Giải thích:**
+- `version: 2`: Sử dụng Build Output API v2
+- `builds`: Chỉ định file `server.js` sử dụng `@vercel/node` builder
+- `routes`: Route tất cả requests đến `server.js`
+- `functions.maxDuration`: Timeout 30 giây (Hobby plan: 10s, Pro: 60s)
+
+### File `.vercelignore`
+
+File `.vercelignore` đã được tạo để loại bỏ các file không cần thiết khi deploy:
+- `node_modules` (sẽ được install trên Vercel)
+- `.env` files (sử dụng Environment Variables trong Vercel Dashboard)
+- Log files và cache
 
 ### Environment Variables (Nếu cần)
 
 Nếu bạn cần cấu hình environment variables:
 
 1. Vào Vercel Dashboard → Project → Settings → Environment Variables
-2. Thêm các biến môi trường cần thiết
-3. Redeploy project để áp dụng thay đổi
+2. Thêm các biến môi trường cần thiết:
+   - `NODE_ENV=production` (khuyến nghị)
+   - Các API keys hoặc secrets khác nếu có
+3. Chọn môi trường: Production, Preview, hoặc Development
+4. Click **"Save"**
+5. Redeploy project để áp dụng thay đổi
+
+**Lưu ý**: Không commit file `.env` vào Git. Sử dụng Environment Variables trong Vercel Dashboard.
 
 ## Giới hạn và lưu ý
 
@@ -173,14 +204,70 @@ Nếu bạn cần cấu hình environment variables:
 
 ## Cập nhật deployment
 
+### Auto-deploy từ GitHub
+
 Mỗi khi push code mới lên GitHub:
-- Vercel sẽ tự động tạo preview deployment
-- Để deploy lên production, vào Dashboard và click "Promote to Production"
-- Hoặc sử dụng Vercel CLI: `vercel --prod`
+- Vercel sẽ tự động tạo **preview deployment** cho mỗi commit
+- Preview URL: `https://your-project-name-git-branch.vercel.app`
+- Production URL: `https://your-project-name.vercel.app`
+
+### Deploy Production
+
+Có 2 cách:
+
+1. **Từ Dashboard**:
+   - Vào Vercel Dashboard → Project → Deployments
+   - Chọn preview deployment muốn promote
+   - Click **"Promote to Production"**
+
+2. **Từ CLI**:
+   ```bash
+   vercel --prod
+   ```
+
+3. **Từ GitHub** (khuyến nghị):
+   - Push code lên branch `main` hoặc `master`
+   - Vercel tự động deploy lên production (nếu đã cấu hình)
+
+### Custom Domain
+
+1. Vào Vercel Dashboard → Project → Settings → Domains
+2. Thêm domain của bạn
+3. Cấu hình DNS theo hướng dẫn của Vercel
+4. Chờ DNS propagate (thường 5-10 phút)
+
+## Best Practices (Tham khảo từ các dự án thành công)
+
+### 1. Cấu trúc Project
+- Giữ code gọn gàng, dễ maintain
+- Tách biệt logic thành modules nếu cần
+- Sử dụng `.vercelignore` để optimize build size
+
+### 2. Error Handling
+- Luôn có error handling cho tất cả routes
+- Log errors để debug dễ dàng
+- Trả về error messages rõ ràng cho client
+
+### 3. Performance
+- Sử dụng caching khi có thể
+- Optimize dependencies (chỉ install những gì cần)
+- Monitor function execution time
+
+### 4. Security
+- Không commit secrets vào Git
+- Sử dụng Environment Variables cho sensitive data
+- Implement rate limiting nếu cần
+
+### 5. Monitoring
+- Sử dụng Vercel Analytics để track performance
+- Monitor function logs trong Vercel Dashboard
+- Set up alerts cho errors
 
 ## Tài liệu tham khảo
 
 - [Vercel Documentation](https://vercel.com/docs)
 - [Deploy Express.js to Vercel](https://vercel.com/docs/frameworks/backend/express)
 - [Serverless Functions](https://vercel.com/docs/functions)
+- [Vercel Build Output API](https://vercel.com/docs/build-output-api)
+- [Example: selfhost-deeplink-demo](https://github.com/chuthuong2004/selfhost-deeplink-demo) - Tham khảo cách deploy thành công
 
