@@ -1,11 +1,26 @@
 const express = require('express');
 const axios = require('axios');
+const cors = require('cors');
 const pageCount = require('page-count').default;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware để parse JSON
+// Cấu hình CORS cho phép các origin cụ thể
+const corsOptions = {
+  origin: [
+    'http://localhost:8080',
+    'https://localhost:8080',
+    'http://dashboard.uranus.io.vn',
+    'https://dashboard.uranus.io.vn'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+// Middleware
+app.use(cors(corsOptions));
 app.use(express.json());
 
 /**
